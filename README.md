@@ -1,33 +1,33 @@
-## Amazon ECS "Deploy Task Definition" Action for GitHub Actions
+## Amazon ECS "Run Task" Action for GitHub Actions
 
-Registers an Amazon ECS task definition and deploys it to an ECS service.
+Runs an Amazon ECS task on ECS cluster.
 
 **Table of Contents**
 
 <!-- toc -->
 
+- [Amazon ECS "Run Task" Action for GitHub Actions](#amazon-ecs-run-task-action-for-github-actions)
 - [Usage](#usage)
-    + [Task definition file](#task-definition-file)
-    + [Task definition container image values](#task-definition-container-image-values)
+  - [Task definition file](#task-definition-file)
+  - [Task definition container image values](#task-definition-container-image-values)
 - [Credentials and Region](#credentials-and-region)
 - [Permissions](#permissions)
-- [AWS CodeDeploy Support](#aws-codedeploy-support)
 - [Troubleshooting](#troubleshooting)
 - [License Summary](#license-summary)
-- [Security Disclosures](#security-disclosures)
 
 <!-- tocstop -->
 
 ## Usage
 
 ```yaml
-    - name: Deploy to Amazon ECS
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+    - name: Run Task on Amazon ECS
+      uses: smitp/amazon-ecs-run-task@v1
       with:
         task-definition: task-definition.json
-        service: my-service
         cluster: my-cluster
-        wait-for-service-stability: true
+        count: 1
+        started-by: github-actions-${{ github.actor }}
+        wait-for-finish: true
 ```
 
 See [action.yml](action.yml) for the full documentation for this action's inputs and outputs.
@@ -93,13 +93,14 @@ The task definition file can be updated prior to deployment with the new contain
         container-name: my-container
         image: ${{ steps.build-image.outputs.image }}
 
-    - name: Deploy Amazon ECS task definition
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+    - name: Run Task on Amazon ECS
+      uses: smitp/amazon-ecs-run-task@v1
       with:
-        task-definition: ${{ steps.task-def.outputs.task-definition }}
-        service: my-service
+        task-definition: task-definition.json
         cluster: my-cluster
-        wait-for-service-stability: true
+        count: 1
+        started-by: github-actions-${{ github.actor }}
+        wait-for-finish: true
 ```
 
 ## Credentials and Region
@@ -142,85 +143,22 @@ This action requires the following minimum set of permissions:
          ]
       },
       {
-         "Sid":"DeployService",
-         "Effect":"Allow",
-         "Action":[
-            "ecs:UpdateService",
-            "ecs:DescribeServices"
-         ],
-         "Resource":[
-            "arn:aws:ecs:<region>:<aws_account_id>:service/<cluster_name>/<service_name>"
-         ]
+         "Sid": "RunTask",
+         "Effect": "Allow",
+         "Action": "ecs:RunTask",
+         "Resource": "arn:aws:ecs:<region>:<aws_account_id>:task-definition/*:*"
+      },
+      {
+         "Sid": "DescribeTasks",
+         "Effect": "Allow",
+         "Action": "ecs:DescribeTasks",
+         "Resource": "arn:aws:ecs:<region>:<aws_account_id>:task/*"
       }
    ]
 }
 ```
 
 Note: the policy above assumes the account has opted in to the ECS long ARN format.
-
-## AWS CodeDeploy Support
-
-For ECS services that uses the `CODE_DEPLOY` deployment controller, additional configuration is needed for this action:
-
-```yaml
-    - name: Deploy to Amazon ECS
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-      with:
-        task-definition: task-definition.json
-        service: my-service
-        cluster: my-cluster
-        wait-for-service-stability: true
-        codedeploy-appspec: appspec.json
-        codedeploy-application: my-codedeploy-application
-        codedeploy-deployment-group: my-codedeploy-deployment-group
-```
-
-The minimal permissions require access to CodeDeploy:
-
-```json
-{
-   "Version":"2012-10-17",
-   "Statement":[
-      {
-         "Sid":"RegisterTaskDefinition",
-         "Effect":"Allow",
-         "Action":[
-            "ecs:RegisterTaskDefinition"
-         ],
-         "Resource":"*"
-      },
-      {
-         "Sid":"PassRolesInTaskDefinition",
-         "Effect":"Allow",
-         "Action":[
-            "iam:PassRole"
-         ],
-         "Resource":[
-            "arn:aws:iam::<aws_account_id>:role/<task_definition_task_role_name>",
-            "arn:aws:iam::<aws_account_id>:role/<task_definition_task_execution_role_name>"
-         ]
-      },
-      {
-         "Sid":"DeployService",
-         "Effect":"Allow",
-         "Action":[
-            "ecs:DescribeServices",
-            "codedeploy:GetDeploymentGroup",
-            "codedeploy:CreateDeployment",
-            "codedeploy:GetDeployment",
-            "codedeploy:GetDeploymentConfig",
-            "codedeploy:RegisterApplicationRevision"
-         ],
-         "Resource":[
-            "arn:aws:ecs:<region>:<aws_account_id>:service/<cluster_name>/<service_name>",
-            "arn:aws:codedeploy:<region>:<aws_account_id>:deploymentgroup:<application_name>/<deployment_group_name>",
-            "arn:aws:codedeploy:<region>:<aws_account_id>:deploymentconfig:*",
-            "arn:aws:codedeploy:<region>:<aws_account_id>:application:<application_name>"
-         ]
-      }
-   ]
-}
-```
 
 ## Troubleshooting
 
@@ -229,7 +167,3 @@ This action emits debug logs to help troubleshoot deployment failures.  To see t
 ## License Summary
 
 This code is made available under the MIT license.
-
-## Security Disclosures
-
-If you would like to report a potential security issue in this project, please do not create a GitHub issue.  Instead, please follow the instructions [here](https://aws.amazon.com/security/vulnerability-reporting/) or [email AWS security directly](mailto:aws-security@amazon.com).
