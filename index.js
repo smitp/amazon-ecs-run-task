@@ -90,6 +90,9 @@ async function run() {
     const count = core.getInput('count', { required: true });
     const startedBy = core.getInput('started-by', { required: false }) || agent;
     const waitForFinish = core.getInput('wait-for-finish', { required: false }) || false;
+    const networkConfigurationJson = core.getInput('network-configuration-json', { required: false }) || false;
+    const networkConfiguration = networkConfigurationJson ? JSON.parse(networkConfigurationJson) : null
+
     let waitForMinutes = parseInt(core.getInput('wait-for-minutes', { required: false })) || 30;
     if (waitForMinutes > MAX_WAIT_MINUTES) {
       waitForMinutes = MAX_WAIT_MINUTES;
@@ -121,7 +124,8 @@ async function run() {
       cluster: clusterName,
       taskDefinition: taskDefArn,
       count: count,
-      startedBy: startedBy
+      startedBy: startedBy,
+      networkConfiguration: networkConfiguration
     })}`)
 
     const runTaskResponse = await ecs.runTask({

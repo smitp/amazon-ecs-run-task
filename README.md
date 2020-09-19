@@ -21,13 +21,14 @@ Runs an Amazon ECS task on ECS cluster.
 
 ```yaml
     - name: Run Task on Amazon ECS
-      uses: smitp/amazon-ecs-run-task@v1
+      uses: kenmuram/amazon-ecs-run-task@v1
       with:
         task-definition: task-definition.json
         cluster: my-cluster
         count: 1
         started-by: github-actions-${{ github.actor }}
         wait-for-finish: true
+        network-configuration-json: "{\"awsvpcConfiguration\":{\"subnets\":[\"subnet_id1\",\"subnet_id2\"],\"security_groups\":[\"secgroup_id1\",\"secgroup_id2\"],\"assign_public_ip\":\"DISABLED\"}}"
 ```
 
 See [action.yml](action.yml) for the full documentation for this action's inputs and outputs.
@@ -94,13 +95,14 @@ The task definition file can be updated prior to deployment with the new contain
         image: ${{ steps.build-image.outputs.image }}
 
     - name: Run Task on Amazon ECS
-      uses: smitp/amazon-ecs-run-task@v1
+      uses: kenmuram/amazon-ecs-run-task@v1
       with:
         task-definition: task-definition.json
         cluster: my-cluster
         count: 1
         started-by: github-actions-${{ github.actor }}
         wait-for-finish: true
+        network-configuration-json: "{\"awsvpcConfiguration\":{\"subnets\":[\"subnet_id1\",\"subnet_id2\"],\"security_groups\":[\"secgroup_id1\",\"secgroup_id2\"],\"assign_public_ip\":\"DISABLED\"}}"
 ```
 
 ## Credentials and Region
