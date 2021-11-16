@@ -10,7 +10,10 @@ const IGNORED_TASK_DEFINITION_ATTRIBUTES = [
   'taskDefinitionArn',
   'requiresAttributes',
   'revision',
-  'status'
+  'status',
+  'registeredAt',
+  'deregisteredAt',
+  'registeredBy'
 ];
 
 const WAIT_DEFAULT_DELAY_SEC = 5;
@@ -76,6 +79,36 @@ function removeIgnoredAttributes(taskDef) {
   return taskDef;
 }
 
+function maintainValidObjects(taskDef) {
+    if (validateProxyConfigurations(taskDef)) {
+        taskDef.proxyConfiguration.properties.forEach((property, index, arr) => {
+            if (!('value' in property)) {
+                arr[index].value = '';
+            }
+            if (!('name' in property)) {
+                arr[index].name = '';
+            }
+        });
+    }
+
+    if(taskDef && taskDef.containerDefinitions){
+      taskDef.containerDefinitions.forEach((container) => {
+        if(container.environment){
+          container.environment.forEach((property, index, arr) => {
+            if (!('value' in property)) {
+              arr[index].value = '';
+            }
+          });
+        }
+      });
+    }
+    return taskDef;
+}
+
+function validateProxyConfigurations(taskDef){
+  return 'proxyConfiguration' in taskDef && taskDef.proxyConfiguration.type && taskDef.proxyConfiguration.type == 'APPMESH' && taskDef.proxyConfiguration.properties && taskDef.proxyConfiguration.properties.length > 0;
+}
+
 async function run() {
   try {
     const agent = 'amazon-ecs-run-task-for-github-actions'
@@ -101,7 +134,7 @@ async function run() {
       taskDefinitionFile :
       path.join(process.env.GITHUB_WORKSPACE, taskDefinitionFile);
     const fileContents = fs.readFileSync(taskDefPath, 'utf8');
-    const taskDefContents = removeIgnoredAttributes(cleanNullKeys(yaml.parse(fileContents)));
+    const taskDefContents = maintainValidObjects(removeIgnoredAttributes(cleanNullKeys(yaml.parse(fileContents))));
 
     let registerResponse;
     try {
