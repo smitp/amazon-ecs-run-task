@@ -27,6 +27,7 @@ Runs an Amazon ECS task on ECS cluster.
         cluster: my-cluster
         count: 1
         started-by: github-actions-${{ github.actor }}
+        subnets: ['subnet-asdfasdfadsfasasdfa','subnet-asdfasdfadsfasdfadf']
         wait-for-finish: true
 ```
 
@@ -100,6 +101,7 @@ The task definition file can be updated prior to deployment with the new contain
         cluster: my-cluster
         count: 1
         started-by: github-actions-${{ github.actor }}
+        subnets: ['subnet-asdfasdfadsfasasdfa','subnet-asdfasdfadsfasdfadf']
         wait-for-finish: true
 ```
 

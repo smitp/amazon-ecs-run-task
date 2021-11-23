@@ -1,7 +1,7 @@
 {
-  "name": "aws-actions-amazon-ecs-deploy-task-definition",
-  "version": "1.3.5",
-  "description": "Registers an Amazon ECS task definition and deploys it to an ECS service.",
+  "name": "amazon-ecs-run-task",
+  "version": "1.0.5",
+  "description": "Registers an Amazon ECS task definition and deploys it to an ECS Cluster as a standalone task.",
   "main": "index.js",
   "scripts": {
     "lint": "eslint **.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aws-actions/amazon-ecs-deploy-task-definition.git"
+    "url": "git+https://github.com/oscar123mendoza/amazon-ecs-run-task.git"
   },
   "keywords": [
     "AWS",
@@ -21,17 +21,17 @@
   "author": "AWS",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/aws-actions/amazon-ecs-deploy-task-definition/issues"
+    "url": "https://github.com/oscar123mendoza/amazon-ecs-run-task/issues"
   },
-  "homepage": "https://github.com/aws-actions/amazon-ecs-deploy-task-definition#readme",
+  "homepage": "https://github.com/oscar123mendoza/amazon-ecs-run-task#readme",
   "dependencies": {
-    "@actions/core": "^1.2.6",
-    "aws-sdk": "^2.710.0",
-    "yaml": "^1.10.0"
+    "@actions/core": "^1.6.0",
+    "aws-sdk": "^2.1029.0",
+    "yaml": "^1.10.2"
   },
   "devDependencies": {
     "@zeit/ncc": "^0.22.3",
-    "eslint": "^7.4.0",
-    "jest": "^26.4.2"
+    "eslint": "^8.2.0",
+    "jest": "^27.3.1"
   }
 }
