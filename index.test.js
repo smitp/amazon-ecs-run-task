@@ -34,6 +34,7 @@ describe('Deploy to ECS', () => {
             .mockReturnValueOnce('task-definition.json')                      // task-definition
             .mockReturnValueOnce('cluster-789')                               // cluster
             .mockReturnValueOnce('1')                                         // count
+            .mockReturnValueOnce('')                                          // capacity-provider-strategy
             .mockReturnValueOnce('amazon-ecs-run-task-for-github-actions');   // started-by
 
         process.env = Object.assign(process.env, { GITHUB_WORKSPACE: __dirname });
@@ -142,6 +143,7 @@ describe('Deploy to ECS', () => {
             .mockReturnValueOnce('task-definition.json')                      // task-definition
             .mockReturnValueOnce('cluster-789')                               // cluster
             .mockReturnValueOnce('1')                                         // count
+            .mockReturnValueOnce('')                                          // capacity-provider-strategy
             .mockReturnValueOnce('amazon-ecs-run-task-for-github-actions')    // started-by
             .mockReturnValueOnce('true');                                     // wait-for-finish
 
@@ -260,7 +262,7 @@ describe('Deploy to ECS', () => {
         expect(mockEcsRegisterTaskDef).toHaveBeenNthCalledWith(1, { family: 'task-def-family'});
     });
 
-    test('error is caught if task def registration fails', async () => {
+    test('error is caught if capacity provider strategy param parsing fails', async () => {
         mockEcsRegisterTaskDef.mockImplementation(() => {
             throw new Error("Could not parse");
         });
@@ -270,5 +272,22 @@ describe('Deploy to ECS', () => {
         expect(core.setFailed).toHaveBeenCalledTimes(2);
         expect(core.setFailed).toHaveBeenNthCalledWith(1, 'Failed to register task definition in ECS: Could not parse');
         expect(core.setFailed).toHaveBeenNthCalledWith(2, 'Could not parse');
+    });
+
+    test('error is caught if task def registration fails', async () => {
+        core.getInput = jest
+            .fn()
+            .mockReturnValueOnce('task-definition.json')                      // task-definition
+            .mockReturnValueOnce('cluster-789')                               // cluster
+            .mockReturnValueOnce('1')                                         // count
+            .mockReturnValueOnce('not-a-json')                                // capacity-provider-strategy
+            .mockReturnValueOnce('amazon-ecs-run-task-for-github-actions')    // started-by
+            .mockReturnValueOnce('true');                                     // wait-for-finish
+
+        await run();
+
+        expect(core.setFailed).toHaveBeenCalledTimes(2);
+        expect(core.setFailed).toHaveBeenNthCalledWith(1, 'Failed to parse capacity provider strategy definition: Unexpected token o in JSON at position 1');
+        expect(core.setFailed).toHaveBeenNthCalledWith(2, 'Unexpected token o in JSON at position 1');
     });
 });

@@ -28,6 +28,7 @@ Runs an Amazon ECS task on ECS cluster.
         count: 1
         started-by: github-actions-${{ github.actor }}
         wait-for-finish: true
+        capacity-provider-strategy: '[{"capacityProvider": "provider", "base": 1, "weight": 1}]' # optional
 ```
 
 See [action.yml](action.yml) for the full documentation for this action's inputs and outputs.

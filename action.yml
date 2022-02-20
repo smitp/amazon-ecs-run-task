@@ -22,6 +22,9 @@ inputs:
   wait-for-minutes:
     description: 'How long to wait for the task reach stopped state, in minutes (default: 30 minutes, max: 6 hours).'
     required: false
+  capacity-provider-strategy:
+    description: "JSON representation of the capacity provider strategy to use for the task."
+    required: false
 outputs:
   task-definition-arn:
     description: 'The ARN of the registered ECS task definition'

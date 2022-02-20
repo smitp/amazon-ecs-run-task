@@ -88,11 +88,24 @@ async function run() {
     const taskDefinitionFile = core.getInput('task-definition', { required: true });
     const cluster = core.getInput('cluster', { required: false });
     const count = core.getInput('count', { required: true });
+    const capacityProviderStrategyString = core.getInput('capacity-provider-strategy', { required: true });
     const startedBy = core.getInput('started-by', { required: false }) || agent;
     const waitForFinish = core.getInput('wait-for-finish', { required: false }) || false;
     let waitForMinutes = parseInt(core.getInput('wait-for-minutes', { required: false })) || 30;
     if (waitForMinutes > MAX_WAIT_MINUTES) {
       waitForMinutes = MAX_WAIT_MINUTES;
+    }
+
+    let capacityProviderStrategy;
+    if (capacityProviderStrategyString != "") {
+      try {
+        capacityProviderStrategy = JSON.parse(capacityProviderStrategyString);
+      } catch (error) {
+        core.setFailed("Failed to parse capacity provider strategy definition: " + error.message);
+        core.debug("Parameter value:");
+        core.debug(capacityProviderStrategyString);
+        throw(error);
+      }
     }
 
     // Register the task definition
@@ -121,6 +134,7 @@ async function run() {
       cluster: clusterName,
       taskDefinition: taskDefArn,
       count: count,
+      capacityProviderStrategy: capacityProviderStrategy,
       startedBy: startedBy
     })}`)
 
@@ -128,6 +142,7 @@ async function run() {
       cluster: clusterName,
       taskDefinition: taskDefArn,
       count: count,
+      capacityProviderStrategy: capacityProviderStrategy,
       startedBy: startedBy
     }).promise();
 
@@ -161,7 +176,7 @@ async function waitForTasksStopped(ecs, clusterName, taskArns, waitForMinutes) {
   const maxAttempts = (waitForMinutes * 60) / WAIT_DEFAULT_DELAY_SEC;
 
   core.debug('Waiting for tasks to stop');
-  
+
   const waitTaskResponse = await ecs.waitFor('tasksStopped', {
     cluster: clusterName,
     tasks: taskArns,
@@ -172,7 +187,7 @@ async function waitForTasksStopped(ecs, clusterName, taskArns, waitForMinutes) {
   }).promise();
 
   core.debug(`Run task response ${JSON.stringify(waitTaskResponse)}`)
-  
+
   core.info(`All tasks have stopped. Watch progress in the Amazon ECS console: https://console.aws.amazon.com/ecs/home?region=${aws.config.region}#/clusters/${clusterName}/tasks`);
 }
 
@@ -187,7 +202,7 @@ async function tasksExitCode(ecs, clusterName, taskArns) {
   const reasons = containers.map(container => container.reason)
 
   const failuresIdx = [];
-  
+
   exitCodes.filter((exitCode, index) => {
     if (exitCode !== 0) {
       failuresIdx.push(index)
