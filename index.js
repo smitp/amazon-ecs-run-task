@@ -1,6 +1,7 @@
 const path = require('path');
 const core = require('@actions/core');
-const aws = require('aws-sdk');
+const { ECS, waitUntilTasksStopped } = require('@aws-sdk/client-ecs');
+
 const yaml = require('yaml');
 const fs = require('fs');
 
@@ -13,7 +14,6 @@ const IGNORED_TASK_DEFINITION_ATTRIBUTES = [
   'status'
 ];
 
-const WAIT_DEFAULT_DELAY_SEC = 5;
 const MAX_WAIT_MINUTES = 360;
 
 function isEmptyValue(value) {
@@ -80,12 +80,14 @@ async function run() {
   try {
     const agent = 'amazon-ecs-run-task-for-github-actions'
 
-    const ecs = new aws.ECS({
+    const ecs = new ECS({
       customUserAgent: agent
     });
 
     // Get inputs
     const taskDefinitionFile = core.getInput('task-definition', { required: true });
+    const networkConfigurationFile = core.getInput('network-configuration', { required: true });
+    const launchType = core.getInput('launch-type', { required: true });
     const cluster = core.getInput('cluster', { required: false });
     const count = core.getInput('count', { required: true });
     const startedBy = core.getInput('started-by', { required: false }) || agent;
@@ -102,10 +104,18 @@ async function run() {
       path.join(process.env.GITHUB_WORKSPACE, taskDefinitionFile);
     const fileContents = fs.readFileSync(taskDefPath, 'utf8');
     const taskDefContents = removeIgnoredAttributes(cleanNullKeys(yaml.parse(fileContents)));
+    // Parse the network configuration
+    core.debug('Parsing network configuration');
+    const networkConfigurationPath = path.isAbsolute(networkConfigurationFile) ?
+    networkConfigurationFile :
+    path.join(process.env.GITHUB_WORKSPACE, networkConfigurationFile);
+    const networkConfigurationFileContents = JSON.parse(fs.readFileSync(networkConfigurationPath, 'utf8'));
+    core.debug("Network configuration contents:");
+    core.debug(JSON.stringify(networkConfigurationFileContents, undefined, 4));
 
     let registerResponse;
     try {
-      registerResponse = await ecs.registerTaskDefinition(taskDefContents).promise();
+      registerResponse = await ecs.registerTaskDefinition(taskDefContents);
     } catch (error) {
       core.setFailed("Failed to register task definition in ECS: " + error.message);
       core.debug("Task definition contents:");
@@ -120,6 +130,8 @@ async function run() {
     core.debug(`Running task with ${JSON.stringify({
       cluster: clusterName,
       taskDefinition: taskDefArn,
+      networkConfiguration: networkConfigurationFileContents,
+      launchType: launchType,
       count: count,
       startedBy: startedBy
     })}`)
@@ -127,9 +139,11 @@ async function run() {
     const runTaskResponse = await ecs.runTask({
       cluster: clusterName,
       taskDefinition: taskDefArn,
-      count: count,
+      networkConfiguration: networkConfigurationFileContents,
+      launchType: launchType,
+      count: parseInt(count),
       startedBy: startedBy
-    }).promise();
+    });
 
     core.debug(`Run task response ${JSON.stringify(runTaskResponse)}`)
 
@@ -158,29 +172,26 @@ async function waitForTasksStopped(ecs, clusterName, taskArns, waitForMinutes) {
     waitForMinutes = MAX_WAIT_MINUTES;
   }
 
-  const maxAttempts = (waitForMinutes * 60) / WAIT_DEFAULT_DELAY_SEC;
-
   core.debug('Waiting for tasks to stop');
   
-  const waitTaskResponse = await ecs.waitFor('tasksStopped', {
+  const waitTaskResponse = await waitUntilTasksStopped({
+    client: ecs,
+    maxWaitTime: 200
+  }, {
     cluster: clusterName,
-    tasks: taskArns,
-    $waiter: {
-      delay: WAIT_DEFAULT_DELAY_SEC,
-      maxAttempts: maxAttempts
-    }
-  }).promise();
+    tasks: taskArns
+  });
 
   core.debug(`Run task response ${JSON.stringify(waitTaskResponse)}`)
   
-  core.info(`All tasks have stopped. Watch progress in the Amazon ECS console: https://console.aws.amazon.com/ecs/home?region=${aws.config.region}#/clusters/${clusterName}/tasks`);
+  core.info(`All tasks have stopped. Watch progress in the Amazon ECS console: https://console.aws.amazon.com/ecs/home?region=[aws.config.region]#/clusters/${clusterName}/tasks`);
 }
 
 async function tasksExitCode(ecs, clusterName, taskArns) {
   const describeResponse = await ecs.describeTasks({
     cluster: clusterName,
     tasks: taskArns
-  }).promise();
+  });
 
   const containers = [].concat(...describeResponse.tasks.map(task => task.containers))
   const exitCodes = containers.map(container => container.exitCode)
