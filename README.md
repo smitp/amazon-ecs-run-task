@@ -1,8 +1,18 @@
 ## Amazon ECS "Run Task" Action for GitHub Actions
 
-Runs an Amazon ECS task on ECS cluster.
+This action was forked from [smitp/amazon-ecs-run-task](https://github.com/smitp/amazon-ecs-run-task).
 
-**Table of Contents**
+This action does two things:
+
+1. It runs the input task definition.
+2. After step 1 successfully completes, it registers the task definition.
+
+The reason for registering the task definition *after* running the task is to allow the GITHUB_TOKEN to be used as a task definition envirionment variable.
+The task definition is registered only after the GITHUB_TOKEN is no longer valid.
+
+To enable the action to run tasks with `network_mode` set to `awsvpc`, the action accepts subnet ids and security groups as inputs.
+
+## Table of Contents
 
 <!-- toc -->
 
@@ -21,16 +31,19 @@ Runs an Amazon ECS task on ECS cluster.
 
 ```yaml
     - name: Run Task on Amazon ECS
-      uses: smitp/amazon-ecs-run-task@v1
+      uses: Enterprise-CMCS/amazon-ecs-run-task@master
       with:
         task-definition: task-definition.json
+        task-definition-arn: arn:aws:ecs:us-east-1:12345:task-definition/mytask-dev:42
         cluster: my-cluster
         count: 1
+        subnets: subnet-1, subnet-2, subnet-3
+        security-groups: sg-1, sg-2
         started-by: github-actions-${{ github.actor }}
         wait-for-finish: true
 ```
 
-See [action.yml](action.yml) for the full documentation for this action's inputs and outputs.
+`security-groups` and `subnets` can be single values or comma separated lists, such as in the example above. See [action.yml](action.yml) for the full documentation for this action's inputs and outputs.
 
 ### Task definition file
 
@@ -94,9 +107,10 @@ The task definition file can be updated prior to deployment with the new contain
         image: ${{ steps.build-image.outputs.image }}
 
     - name: Run Task on Amazon ECS
-      uses: smitp/amazon-ecs-run-task@v1
+      uses: Enterprise-CMCS/amazon-ecs-run-task@vXYZ
       with:
         task-definition: task-definition.json
+        task-definition-arn: arn:aws:ecs:us-east-1:12345:task-definition/mytask-dev:42
         cluster: my-cluster
         count: 1
         started-by: github-actions-${{ github.actor }}

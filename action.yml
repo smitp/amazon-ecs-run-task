@@ -5,14 +5,22 @@ branding:
   color: 'orange'
 inputs:
   task-definition:
-    description: 'The name of ECS task definition'
+    description: 'The filename (<file>.json) of the ECS task definition'
     required: true
+  task-definition-arn:
+    description: 'The ECS task definition ARN'
   cluster:
     description: "The name of the ECS cluster. Will default to the 'default' cluster"
     required: true
   count:
-    description: "The count of tasks to run. Will default to the 1"
+    description: "The count of tasks to run. Will default to 1"
     required: true
+  security-groups:
+    description: "The array of security groups to set in the network configuration. Will default to an empty array."
+    required: false
+  subnets:
+    description: "The array of subnets to set in the network configuration. Will default to an empty array."
+    required: false
   started-by:
     description: "The value of the task started-by"
     required: false
@@ -28,5 +36,5 @@ outputs:
   task-arn:
     description: 'The ARN of the ECS task'
 runs:
-  using: 'node12'
+  using: 'node16'
   main: 'dist/index.js'

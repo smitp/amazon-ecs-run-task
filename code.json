@@ -1,0 +1,76 @@
+{
+  "name": "mac-fc-amazon-ecs-run-task",
+  "description": "This GitHub Action runs the input task definition.",
+  "longDescription": "This GitHub Action runs the input task definition. After that successfully completes, it registers the task definition.",
+  "status": "Production",
+  "permissions": {
+    "licenses": [
+      {
+        "name": "None",
+        "URL": "none"
+      }
+    ],
+    "usageType": "governmentWideReuse",
+    "exemptionText": ""
+  },
+  "organization": "Centers for Medicare & Medicaid Services",
+  "repositoryURL": "https://github.com/Enterprise-CMCS/mac-fc-amazon-ecs-run-task",
+  "projectURL": "",
+  "repositoryHost": "github.com/CMS-Enterprise",
+  "repositoryVisibility": "public",
+  "vcs": "git",
+  "laborHours": 0,
+  "reuseFrequency": {
+    "forks": 790
+  },
+  "platforms": [
+    "linux"
+  ],
+  "categories": [
+    "application-development",
+    "it-development"
+  ],
+  "softwareType": "standalone/backend",
+  "languages": [
+    "JavaScript"
+  ],
+  "maintenance": "contract",
+  "contractNumber": "47QTCA21D00AC",
+  "date": {
+    "created": "2024-11-24T16:38:00Z",
+    "lastModified": "",
+    "metaDataLastUpdated": ""
+  },
+  "tags": [
+    "ecs service",
+    "ecs task definition",
+    "ecs task",
+    "ecs run task",
+    "ecs register task definition",
+    "ecs run task GitHub Action"
+  ],
+  "contact": {
+    "email": "cms-macfc@corbalt.com",
+    "name": "Corbalt"
+  },
+  "feedbackMechanisms": [
+    "https://github.com/Enterprise-CMCS/mac-fc-amazon-ecs-run-task/issues"
+  ],
+  "localisation": false,
+  "repositoryType": "tools",
+  "userInput": false,
+  "fismaLevel": "Moderate",
+  "group": "CMCS/DSG",
+  "projects": [
+    "ECS Run Task GHA"
+  ],
+  "systems": [],
+  "upstream": [],
+  "subsetInHealthcare": [
+    "Medicaid"
+  ],
+  "userType": [
+    "Government"
+  ],
+  "maturityModelTier": 2
+}

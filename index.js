@@ -10,7 +10,9 @@ const IGNORED_TASK_DEFINITION_ATTRIBUTES = [
   'taskDefinitionArn',
   'requiresAttributes',
   'revision',
-  'status'
+  'status',
+  'registeredAt',
+  'registeredBy',
 ];
 
 const WAIT_DEFAULT_DELAY_SEC = 5;
@@ -63,17 +65,24 @@ function cleanNullKeys(obj) {
 }
 
 function removeIgnoredAttributes(taskDef) {
+  if (IGNORED_TASK_DEFINITION_ATTRIBUTES.length > 0) {
+    core.warning(`Ignoring properties '${IGNORED_TASK_DEFINITION_ATTRIBUTES}' in the task definition file. ` +
+        'These properties are returned by the Amazon ECS DescribeTaskDefinition API and may be shown in the ECS console, ' +
+        'but they are not valid fields when registering a new task definition. ' +
+        'These fields can be safely removed from your task definition file.');
+  }
+
   for (var attribute of IGNORED_TASK_DEFINITION_ATTRIBUTES) {
     if (taskDef[attribute]) {
-      core.warning(`Ignoring property '${attribute}' in the task definition file. ` +
-        'This property is returned by the Amazon ECS DescribeTaskDefinition API and may be shown in the ECS console, ' +
-        'but it is not a valid field when registering a new task definition. ' +
-        'This field can be safely removed from your task definition file.');
       delete taskDef[attribute];
     }
   }
 
   return taskDef;
+}
+
+function createArrayFromString(str) {
+  return str.split(/\s+/);
 }
 
 async function run() {
@@ -86,8 +95,11 @@ async function run() {
 
     // Get inputs
     const taskDefinitionFile = core.getInput('task-definition', { required: true });
+    const taskDefArnToRun = core.getInput('task-definition-arn', { required: true });
     const cluster = core.getInput('cluster', { required: false });
     const count = core.getInput('count', { required: true });
+    const subnets = core.getInput('subnets', { required: false }) || '';
+    const securityGroups = core.getInput('security-groups', { required: false }) || '';
     const startedBy = core.getInput('started-by', { required: false }) || agent;
     const waitForFinish = core.getInput('wait-for-finish', { required: false }) || false;
     let waitForMinutes = parseInt(core.getInput('wait-for-minutes', { required: false })) || 30;
@@ -95,40 +107,31 @@ async function run() {
       waitForMinutes = MAX_WAIT_MINUTES;
     }
 
-    // Register the task definition
-    core.debug('Registering the task definition');
-    const taskDefPath = path.isAbsolute(taskDefinitionFile) ?
-      taskDefinitionFile :
-      path.join(process.env.GITHUB_WORKSPACE, taskDefinitionFile);
-    const fileContents = fs.readFileSync(taskDefPath, 'utf8');
-    const taskDefContents = removeIgnoredAttributes(cleanNullKeys(yaml.parse(fileContents)));
-
-    let registerResponse;
-    try {
-      registerResponse = await ecs.registerTaskDefinition(taskDefContents).promise();
-    } catch (error) {
-      core.setFailed("Failed to register task definition in ECS: " + error.message);
-      core.debug("Task definition contents:");
-      core.debug(JSON.stringify(taskDefContents, undefined, 4));
-      throw(error);
-    }
-    const taskDefArn = registerResponse.taskDefinition.taskDefinitionArn;
-    core.setOutput('task-definition-arn', taskDefArn);
-
+    // Run task from the input task definition
     const clusterName = cluster ? cluster : 'default';
+
+    const networkConfiguration = {
+      awsvpcConfiguration: {
+        subnets: createArrayFromString(subnets),
+        securityGroups: createArrayFromString(securityGroups)
+      }
+    }
 
     core.debug(`Running task with ${JSON.stringify({
       cluster: clusterName,
-      taskDefinition: taskDefArn,
+      taskDefinition: taskDefArnToRun,
       count: count,
+      networkConfiguration: networkConfiguration,
       startedBy: startedBy
     })}`)
 
     const runTaskResponse = await ecs.runTask({
       cluster: clusterName,
-      taskDefinition: taskDefArn,
+      taskDefinition: taskDefArnToRun,
       count: count,
-      startedBy: startedBy
+      networkConfiguration: networkConfiguration,
+      startedBy: startedBy,
+      launchType: "FARGATE"
     }).promise();
 
     core.debug(`Run task response ${JSON.stringify(runTaskResponse)}`)
@@ -151,6 +154,26 @@ async function run() {
     core.setFailed(error.message);
     core.debug(error.stack);
   }
+
+  // Register the task definition that was used to run the task
+  core.debug('Registering the task definition');
+  const taskDefPath = path.isAbsolute(taskDefinitionFile) ?
+    taskDefinitionFile :
+    path.join(process.env.GITHUB_WORKSPACE, taskDefinitionFile);
+  const fileContents = fs.readFileSync(taskDefPath, 'utf8');
+  const taskDefContents = removeIgnoredAttributes(cleanNullKeys(yaml.parse(fileContents)));
+
+  let registerResponse;
+  try {
+    registerResponse = await ecs.registerTaskDefinition(taskDefContents).promise();
+  } catch (error) {
+    core.setFailed("Failed to register task definition in ECS: " + error.message);
+    core.debug("Task definition contents:");
+    core.debug(JSON.stringify(taskDefContents, undefined, 4));
+    throw(error);
+  }
+  const taskDefArn = registerResponse.taskDefinition.taskDefinitionArn;
+  core.setOutput('task-definition-arn', taskDefArn);
 }
 
 async function waitForTasksStopped(ecs, clusterName, taskArns, waitForMinutes) {
